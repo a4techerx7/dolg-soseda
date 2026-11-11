@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101116">
+  <title>Долг соседа</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101116;
+      --card: #191b24;
+      --muted: #9294a2;
+      --line: #292b36;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+      background: var(--bg);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    .app { width: 100%; max-width: 560px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+
+    .logo { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+
+    .gradient-title {
+      font-size: clamp(16px, 4.5vw, 21px);
+      line-height: 1.15;
+      font-weight: 900;
+      letter-spacing: .4px;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #a78bfa 0%, #ec4899 55%, #fb7185 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .brand-sub {
+      color: #777987;
+      font-size: 9px;
+      letter-spacing: 2px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 5px;
+      max-width: 62%;
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 10px;
+      background: #242630;
+      color: #aaa;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .tab.active { background: #fff; color: #111; }
+
+    .clock {
+      text-align: center;
+      font-size: clamp(39px, 11vw, 52px);
+      font-weight: 300;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .date {
+      margin-top: 8px;
+      text-align: center;
+      color: #777987;
+      font-size: 13px;
+      text-transform: capitalize;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      margin-top: 42px;
+      padding: 28px 20px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      text-align: center;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 1.2px;
+    }
+
+    .amount {
+      margin: 17px 0 9px;
+      font-size: clamp(38px, 10vw, 46px);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .small {
+      color: #8b8d9b;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .countdown {
+      margin: 25px 0 16px;
+      font-size: clamp(29px, 8vw, 38px);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+
+    .note {
+      margin: 22px auto 0;
+      max-width: 420px;
+      color: #6f7280;
+      font-size: 11px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    @media (max-width: 380px) {
+      header { flex-direction: column; margin-bottom: 38px; }
+      .tabs { max-width: 100%; justify-content: flex-start; }
+      .tab { padding: 9px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="logo">
+        <span class="gradient-title">ДОЛГ СОСЕДА</span>
+        <span class="brand-sub">DEBT CLOCK</span>
+      </div>
+
+      <nav class="tabs" aria-label="Разделы приложения">
+        <button class="tab active" type="button" data-tab="0">Текущий долг</button>
+        <button class="tab" type="button" data-tab="1">Погашение</button>
+        <button class="tab" type="button" data-tab="2">До 00:00</button>
+      </nav>
+    </header>
+
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="date" id="date"></div>
+
+    <section class="panel active" id="panel0">
+      <div class="card">
+        <div class="label">ТЕКУЩИЙ ДОЛГ</div>
+        <div class="amount" id="principal">3,00 €</div>
+        <div class="small">
+          Начальная сумма: <span id="startAmount">3,00 €</span><br>
+          Дневная ставка: 45%<br>
+          (с процентами: <strong id="calculatedDebt">3,00 €</strong>)
+        </div>
+      </div>
+      <p class="note" id="accrualNote"></p>
+    </section>
+
+    <section class="panel" id="panel1">
+      <div class="card">
+        <div class="label">ВРЕМЯ ДО ПОГАШЕНИЯ</div>
+        <div class="countdown" id="deadlineTimer">--:--:--</div>
+        <div class="small" id="deadlineText">До установленного срока погашения</div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel2">
+      <div class="card">
+        <div class="label">ДО КОНЦА СУТОК</div>
+        <div class="countdown" id="dayTimer">--:--:--</div>
+        <div class="small">
+          Обратный отсчёт до местной полуночи.<br>
+          В 00:00 начисляется очередной ежедневный процент.
+        </div>
+      </div>
+    </section>
+
+    <p class="note">Расчёт носит информационный характер. Фактические условия долга должны быть согласованы сторонами.</p>
+  </main>
+
+  <script>
+    // НАСТРОЙКИ — при необходимости измени эти значения перед публикацией.
+    // Дата и время указываются по местному времени устройства (формат ГГГГ-ММ-ДДTчч:мм:сс).
+    const INITIAL_DEBT_EUR = 3;
+    const DAILY_RATE = 0.45;
+    const DEBT_START = "2026-11-11T00:00:00";
+    const REPAYMENT_DEADLINE = "2026-11-18T23:59:00";
+
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const money = value => value.toLocaleString("de-DE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + " €";
+
+    function localCalendarDay(date) {
+      return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function formatDuration(milliseconds) {
+      if (milliseconds <= 0) return "00:00:00";
+
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const pad = number => String(number).padStart(2, "0");
+
+      return (days > 0 ? days + " д " : "") +
+        pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+    }
+
+    function update() {
+      const now = new Date();
+
+      document.getElementById("clock").textContent =
+        now.toLocaleTimeString("ru-RU", { hour12: false });
+
+      document.getElementById("date").textContent =
+        now.toLocaleDateString("ru-RU", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        });
+
+      const start = new Date(DEBT_START);
+      const elapsedDays = Math.max(
+        0,
+        Math.floor((localCalendarDay(now) - localCalendarDay(start)) / 86400000)
+      );
+
+      // Ежедневная капитализация: сумма умножается на 1 + дневная ставка
+      // за каждый полный календарный день после даты начала долга.
+      const currentDebt = INITIAL_DEBT_EUR * Math.pow(1 + DAILY_RATE, elapsedDays);
+
+      document.getElementById("principal").textContent = money(INITIAL_DEBT_EUR);
+      document.getElementById("startAmount").textContent = money(INITIAL_DEBT_EUR);
+      document.getElementById("calculatedDebt").textContent = money(currentDebt);
+      document.getElementById("accrualNote").textContent =
+        "Полных дней начисления: " + elapsedDays +
+        ". Расчётная сумма долга: " + money(currentDebt) + ".";
+
+      const nextMidnight = new Date(
+        now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0
+      );
+      document.getElementById("dayTimer").textContent =
+        formatDuration(nextMidnight - now);
+
+      const deadline = new Date(REPAYMENT_DEADLINE);
+      document.getElementById("deadlineTimer").textContent =
+        formatDuration(deadline - now);
+      document.getElementById("deadlineText").textContent =
+        deadline - now <= 0
+          ? "Установленный срок погашения прошёл"
+          : "Срок: " + deadline.toLocaleString("ru-RU", {
+              day: "numeric", month: "long", year: "numeric",
+              hour: "2-digit", minute: "2-digit"
+            });
+    }
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        const selected = Number(button.dataset.tab);
+        document.querySelectorAll(".tab").forEach((tab, index) => {
+          tab.classList.toggle("active", index === selected);
+        });
+        document.querySelectorAll(".panel").forEach((panel, index) => {
+          panel.classList.toggle("active", index === selected);
+        });
+      });
+    });
+
+    update();
+    setInterval(update, 1000);
+  </script>
+</body>
+</html>
