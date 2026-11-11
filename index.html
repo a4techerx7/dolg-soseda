@@ -56,6 +56,20 @@
       letter-spacing: 2px;
     }
 
+    .gradient-message {
+      display: block;
+      max-width: 100%;
+      margin-top: 12px;
+      font-size: clamp(12px, 3.2vw, 15px);
+      line-height: 1.45;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+      background: linear-gradient(90deg, #a78bfa 0%, #ec4899 48%, #fb7185 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
     .tabs {
       display: flex;
       flex-wrap: wrap;
@@ -153,6 +167,7 @@
       <div class="logo">
         <span class="gradient-title">ДОЛГ СОСЕДА</span>
         <span class="brand-sub">DEBT CLOCK</span>
+        <span class="gradient-message">я конченный уебан который не может купить себе шмали и беру в долг у соседа которого почти не знаю</span>
       </div>
 
       <nav class="tabs" aria-label="Разделы приложения">
